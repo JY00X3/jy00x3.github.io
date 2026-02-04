@@ -4,7 +4,7 @@ date: 2026-02-02 18:00:00 +0000
 categories: [HACK THE BOX]
 tags: [walkthrough, windows, mssql, adcs, esc1, active-directory, medium]
 image:
-  path: /assets/sequel/cover.png
+  path: /assets/sequal/cover.png
 ---
 
 ## 💾 Machine Overview

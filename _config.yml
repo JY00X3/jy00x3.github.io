@@ -34,7 +34,7 @@ twitter:
 social:
   # Change to your full name.
   # It will be displayed as the default author of the posts and the copyright owner in the Footer
-  name: Abdelrahman Hamada 
+  name: Abdelrahman Hamada Abdelsalam
   email: abdelrahmanhamada699@gmail.com # change to your email address
   links:
     # The first element serves as the copyright owner's link
@@ -98,7 +98,7 @@ theme_mode: # [light | dark]
 cdn:
 
 # the avatar on sidebar, support local or CORS resources
-avatar:
+avatar: https://media.licdn.com/dms/image/v2/D4D03AQGa_uzeIJ9DQA/profile-displayphoto-shrink_400_400/profile-displayphoto-shrink_400_400/0/1715711147429?e=1772064000&v=beta&t=UOZnQCG9fJ6M-fJSk6X26um6uiscmaWW3jbi8j2AwUg
 
 # The URL of the site-wide social preview image used in SEO `og:image` meta tag.
 # It can be overridden by a customized `page.image` in front matter.

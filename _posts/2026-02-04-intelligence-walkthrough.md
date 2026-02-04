@@ -82,7 +82,7 @@ while current <= end:
         pass
     current += timedelta(days=1)
 ```
-![Desktop View](/assets/intel/image2.png){: width="700" height="400" .normal }
+![Desktop View](/assets/intel/image4.png){: width="700" height="400" .normal }
 A total of 84 PDF files were discovered.
 
 
@@ -102,7 +102,7 @@ The file 2020-06-04-upload.pdf contained a default password:
 ```shell
 NewIntelligenceCorpUser9876
 ```
-![Desktop View](/assets/intel/image3.png){: width="700" height="400" .normal }
+![Desktop View](/assets/intel/image2.png){: width="700" height="400" .normal }
 
 ### Metadata Analysis & User Enumeration
 Usernames were extracted from the PDF "Creator" metadata:
@@ -117,7 +117,7 @@ I then used kerbrute to verify these users against the Domain Controller:
 ```shell
 kerbrute userenum --dc 10.129.95.154 -d intelligence.htb usernames.list
 ```
-![Desktop View](/assets/intel/image4.png){: width="700" height="400" .normal }
+![Desktop View](/assets/intel/image3.png){: width="700" height="400" .normal }
 ### Password Spraying
 
 Using the discovered password against the list of valid users:

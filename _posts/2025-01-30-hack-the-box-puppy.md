@@ -1,7 +1,7 @@
 ---
 title: "Hack The Box: Puppy Walkthrough"
 date: 2025-01-30 
-categories: [HACK THE BOX]
+categories: [HackTheBox, Active Directory, Windows]
 tags: [walkthrough, windows, active-directory, bloodhound, keepass, dpapi, ad]
 image:
   path: /assets/puppy/cover.png

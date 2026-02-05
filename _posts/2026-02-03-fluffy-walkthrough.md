@@ -1,7 +1,7 @@
 ---
 title: "Hack The Box: Fluffy Walkthrough"
 date: 2026-02-03 
-categories: [HACK THE BOX]
+categories: [HackTheBox, Active Directory, Windows]
 tags: [walkthrough, windows, active-directory, adcs, assumed-breach, easy, cve-2025-24071]
 image:
   path: /assets/fluffy/cover.png

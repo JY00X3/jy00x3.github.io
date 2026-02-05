@@ -92,4 +92,19 @@ Switching to **Street View** allowed me to verify the building’s name by spott
 ## 🚩 Final Flag
 
 After a few formatting attempts, the accepted flag was:
+pctf{Center_for_the_Arts_Concert_Hall}
 
+
+---
+
+## 🧠 Takeaway
+
+This challenge was a great demonstration of **OSINT fundamentals**:
+
+- Landmark recognition  
+- Environmental correlation  
+- Satellite + Street View cross-validation  
+
+Small details win geolocation challenges — especially when the hunt is *legally distinct* 😉
+
+Happy hacking 🧑‍💻🌍

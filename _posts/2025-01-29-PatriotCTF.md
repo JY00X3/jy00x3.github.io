@@ -1,6 +1,6 @@
 ---
 title: "PatriotCTF 2025 — Where’s Legally Distinct Waldo (OSINT Challenge 3)"
-date: 2026-02-05
+date: 2025-11-30
 categories: [CTF, OSINT]
 tags: [osint, geolocation, patriotctf, gmu]
 image:

@@ -1,6 +1,6 @@
 ---
 title: "Hack The Box: timelapse Walkthrough"
-date: 2026-02-05
+date: 2026-02-03
 categories: [HackTheBox, Active Directory, Windows]
 tags: [htb, active-directory, windows, smb, laps, winrm]
 image:

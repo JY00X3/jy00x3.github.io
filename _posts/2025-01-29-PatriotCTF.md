@@ -92,8 +92,9 @@ Switching to **Street View** allowed me to verify the building’s name by spott
 ## 🚩 Final Flag
 
 After a few formatting attempts, the accepted flag was:
+```shell
 pctf{Center_for_the_Arts_Concert_Hall}
-
+```
 
 ---
 

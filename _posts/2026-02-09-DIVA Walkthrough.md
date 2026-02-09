@@ -1,7 +1,7 @@
 ---
 title: "Android Security Lab: DIVA Walkthrough"
 date: 2026-02-09 18:00:00 +0000
-categories: [Android, Mobile Security]
+categories: [ Mobile Security , Android]
 tags: [android, diva, insecure-storage, hardcoded-secrets, sql-injection, access-control, mobile-pentesting]
 image:
   path: /assets/diva/cover.png

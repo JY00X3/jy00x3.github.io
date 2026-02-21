@@ -1,6 +1,6 @@
 ---
 title: "Hack The Box: Escape Walkthrough"
-date: 2026-12-12 
+date: 2025-12-12 
 categories: [HackTheBox, Active Directory, Windows]
 tags: [walkthrough, windows, mssql, adcs, esc1, active-directory, medium]
 image:
@@ -153,4 +153,4 @@ Insecure Logs: Storing passwords in plaintext files.
 
 Misconfigured ADCS: The final nail in the coffin via ESC1.
 
-Happy Hacking XD!
+# Happy Hacking XD!

@@ -1,6 +1,6 @@
 ---
 title: "NoSQL Injection — Dumping the Admin Password"
-date: 2026-02-19
+date: 2025-06-19
 categories: [CTF, Web, Security]
 tags: [nosqli, mongodb, authentication, web, ctf, access-control]
 image:

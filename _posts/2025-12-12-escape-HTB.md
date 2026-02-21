@@ -1,6 +1,6 @@
 ---
 title: "Hack The Box: Escape Walkthrough"
-date: 2026-02-02 18:00:00 +0000
+date: 2026-12-12 
 categories: [HackTheBox, Active Directory, Windows]
 tags: [walkthrough, windows, mssql, adcs, esc1, active-directory, medium]
 image:

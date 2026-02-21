@@ -1,6 +1,6 @@
 ---
 title: "Hack The Box: Forest Walkthrough"
-date: 2026-02-05 12:00:00 +0000
+date: 2025-12-10
 categories: [HackTheBox, Active Directory, Windows]
 tags: [walkthrough, windows, active directory, easy, kerberos, asreproast, exchange, dcsync]
 image:

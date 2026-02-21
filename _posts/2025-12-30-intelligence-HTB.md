@@ -1,6 +1,6 @@
 ---
 title: "Hack The Box: Intelligence Walkthrough"
-date: 2026-02-04 12:00:00 +0000
+date: 2025-12-30
 categories: [HackTheBox, Active Directory, Windows]
 tags: [walkthrough, windows, active directory, medium]
 image:

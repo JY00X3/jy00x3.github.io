@@ -1,6 +1,6 @@
 ---
 title: "Hack The Box — Sauna Walkthrough"
-date: 2026-02-14 18:00:00 +0000
+date: 2025-12-10 
 categories: [HackTheBox, Active Directory,]
 tags: [htb, sauna, active-directory, asrep-roasting, kerbrute, bloodhound, dcsync, windows]
 image:

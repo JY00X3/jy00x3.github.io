@@ -7,7 +7,7 @@ categories:
   - Reverse Engineering
 tags: [android, frida, hooking, game-hacking, reverse-engineering, dynamic-analysis]
 image:
-  path: /assets/spacepeng/cover.png
+  path: /assets/Hooking/4.png
 ---
 
 # 🎮  Frida Hooking Deep Dive

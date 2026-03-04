@@ -98,8 +98,7 @@ theme_mode: # [light | dark]
 cdn:
 
 # the avatar on sidebar, support local or CORS resources
-avatar: https://www.linkedin.com/in/abdelrahman-hamada-aa7527251/?lipi=urn%3Ali%3Apage%3Ad_flagship3_profile_view_base%3BBFXJIm6jRFm1UM8m2QDw0Q%3D%3D
-
+avatar: https://media.licdn.com/dms/image/v2/D4D03AQGa_uzeIJ9DQA/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1715711147429?e=1774483200&v=beta&t=Rmc4WRy9aXSWNI_Sq-2DDEFK2vEkLHw4FHsXVN_xdG4
 # The URL of the site-wide social preview image used in SEO `og:image` meta tag.
 # It can be overridden by a customized `page.image` in front matter.
 social_preview_image: # string, local or CORS resources

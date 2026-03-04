@@ -16,7 +16,7 @@ timezone:
 
 title: jy00x3 Blog  # the main title
 
-tagline: The "Hunter" Vibe  # it will display as the subtitle
+tagline: The "Hunter" Vibe - Hack, Learn, Dominate # it will display as the subtitle
 
 description: >- # used by seo meta and the atom feed
   A minimal, responsive and feature-rich Jekyll theme for technical writing.

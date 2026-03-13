@@ -1,8 +1,8 @@
 ---
 title: "Hack The Box: NanoCorp Walkthrough"
 date: 2026-03-13
-categories: [HackTheBox, Active Directory, Windows]
-tags: [walkthrough, windows, active directory, hard]
+categories: ["HackTheBox", "Active Directory", "Windows"]
+tags: ["walkthrough", "windows", "active directory", "hard"]
 image:
   path: /assets/nanocorp/cover.png
 ---

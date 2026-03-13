@@ -136,6 +136,10 @@ The upload functionality accepted **ZIP files**, which immediately suggested a p
 
 Research revealed a vulnerability affecting applications that improperly process uploaded ZIP archives.
 
+CVE-2025–24071 (Windows File Explorer Spoofing). This vulnerability allows an attacker to leak NTLM hashes when a victim interacts with a crafted .library-ms file inside a ZIP archive.
+
+Windows Explorer automatically initiates an SMB authentication request when a .library-ms file is extracted from a .rar archive, leading to NTLM hash disclosure. The user does not need to open or execute the file—simply extracting it is enough to trigger the leak
+
 A public proof-of-concept exploit was cloned:
 
 ```shell

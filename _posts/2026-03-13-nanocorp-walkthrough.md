@@ -21,7 +21,6 @@ The machine demonstrates several modern enterprise attack techniques including:
 - Active Directory ACL privilege escalation
 - BloodHound analysis
 - WinRM authentication
-- MSI repair abuse for SYSTEM privilege escalation
 
 Before beginning, the hostname was added to the local hosts file:
 

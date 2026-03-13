@@ -100,7 +100,6 @@ However, navigating through the interface revealed a **Hiring Portal**.
 
 Clicking the **Apply Now** button on the website redirected to a new subdomain:
 
-![Desktop View](/assets/nanocorp/5.png){: width="700" height="400" .normal }
 
 
 ```shell
@@ -123,6 +122,9 @@ The hiring page contained a job application form with the following fields:
 - Email
 - Position Selection
 - File Upload
+
+![Desktop View](/assets/nanocorp/5.png){: width="700" height="400" .normal }
+
 
 The upload functionality accepted **ZIP files**, which immediately suggested a potential attack vector.
 

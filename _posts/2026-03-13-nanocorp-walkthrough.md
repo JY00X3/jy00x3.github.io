@@ -418,10 +418,6 @@ cd Desktop
 dir
 ```
 
-```shell
-user.txt
-```
-
 Displaying the flag:
 
 ```shell

@@ -1,6 +1,6 @@
 ---
 title: "Gavel HTB — From PDO SQL Injection to RCE"
-date: 2025-06-19
+date: 2026-3-29
 categories: [HTB, Web, Security]
 tags: [sqli, pdo, php, rce, hashcat, git-dumper, mysql, web, htb]
 image:

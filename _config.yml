@@ -98,7 +98,7 @@ theme_mode: # [light | dark]
 cdn:
 
 # the avatar on sidebar, support local or CORS resources
-avatar:  D:\blog\jy00x3.github.io\Matrix 1999 - Wake Up Neo….avif #https://media.licdn.com/dms/image/v2/D4D03AQGa_uzeIJ9DQA/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1715711147429?e=1774483200&v=beta&t=Rmc4WRy9aXSWNI_Sq-2DDEFK2vEkLHw4FHsXVN_xdG4
+avatar: https://media.licdn.com/dms/image/v2/D4D03AQGa_uzeIJ9DQA/profile-displayphoto-shrink_400_400/profile-displayphoto-shrink_400_400/0/1715711147429?e=1776297600&v=beta&t=13J0f66acTP3cBUa1ePZEcELzXfm41SZo2MUk0NE7O4
 # The URL of the site-wide social preview image used in SEO `og:image` meta tag.
 # It can be overridden by a customized `page.image` in front matter.
 social_preview_image: # string, local or CORS resources

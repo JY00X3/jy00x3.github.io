@@ -3,6 +3,8 @@ title: "Kerberos Delegation in Active Directory — Concepts & Abuse"
 date: 2026-04-12
 categories: ["Active Directory", "Windows", "Kerberos"]
 tags: ["kerberos", "delegation", "active directory", "unconstrained", "constrained", "RBCD", "lateral movement", "S4U2Self", "S4U2Proxy"]
+image:
+  path: /assets/delegation/cover.jpg
 
 ---
 

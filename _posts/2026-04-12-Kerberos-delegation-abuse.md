@@ -626,7 +626,6 @@ secretsdump.py \
 
 - [HackTricks — Unconstrained Delegation](https://hacktricks.wiki/en/windows-hardening/active-directory-methodology/unconstrained-delegation.html)
 - [hackndo — Kerberos Delegation](https://en.hackndo.com/kerberos-delegation/)
-- [Abusing Constrained Delegation in 2 Minutes (YouTube)](https://www.youtube.com/watch?v=WVGEP4salJY)
 - [Microsoft Docs — S4U2Self and S4U2Proxy](https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-sfu/)
 
 ## Happy Hacking 👾

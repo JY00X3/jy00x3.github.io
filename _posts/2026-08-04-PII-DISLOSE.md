@@ -9,7 +9,7 @@ categories: [Bug Bounty, Web, API Security, Business Logic]
 tags: [race-condition, turbo-intruder, api, bola, idor, access-control, business-logic, legacy-api]
 
 image:
-path: d:\blog\jy00x3.github.io\assets\PII disclosure GET ur guide\360_F_730400135_AsCtklC8gtZe10GFF9TTMXcZs0m2at4T.jpg
+path: /assets/PII/cover.jpg
 
 ---
 ![Desktop View](/assets/PII/cover.jpg){: width="700" height="400" .normal }

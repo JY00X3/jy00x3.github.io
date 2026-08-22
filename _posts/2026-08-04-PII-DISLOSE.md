@@ -6,7 +6,7 @@ tags: [race-condition, turbo-intruder, api, bola, idor, access-control, business
 image:
   path: /assets/PII/cover.jpg
 ---
-![Desktop View](/assets/PII/cover.jpg){: width="700" height="400" .normal }
+
 
 ## 1. Introduction
 

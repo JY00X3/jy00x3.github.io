@@ -1,12 +1,12 @@
 ---
+
 title: "Race Condition in Organization Membership — Legacy API Abuse and Sensitive Data Exposure"
 date: 2026-08-04
 categories: [Bug Bounty, Web, API Security, Business Logic]
 tags: [race-condition, turbo-intruder, api, bola, idor, access-control, business-logic, legacy-api]
 image:
-  path: /assets/PII/cover.jpg
----
-
+path: /assets/PII/cover.jpg
+---------------------------
 
 ## 1. Introduction
 
@@ -25,6 +25,8 @@ The investigation eventually revealed a chain involving:
 * Sensitive user information disclosure
 
 The complete attack chain ultimately allowed more than **200 users** to be added to an organization that was intended to be limited to five members.
+
+![Attack chain overview](/assets/PII/5.png)
 
 ---
 
@@ -77,9 +79,13 @@ The final stage connected the user to the organization:
 POST /api/v2/connect
 ```
 
+![Modern API workflow](/assets/PII/2.png)
+
+
 At this point, the application appeared to enforce the organization's membership restriction.
 
 Rather than immediately attempting to bypass the restriction, I continued investigating how the functionality was implemented and whether older versions of the API exposed alternative functionality.
+
 
 ---
 
@@ -98,6 +104,7 @@ Unlike the newer workflow, the legacy endpoint accepted a user UUID directly.
 This was significant because it provided an alternative path for performing the same general membership operation without necessarily going through the complete `/api/v2` workflow.
 
 The next step was therefore to understand how the UUID was generated and whether arbitrary user accounts could be targeted.
+
 
 ---
 
@@ -139,6 +146,7 @@ At this stage, the situation was:
 Maximum Members: 5
 
 Sequential Requests:
+
 5 Members → Additional Requests Rejected
 ```
 
@@ -171,16 +179,18 @@ Request B ─┤
 Request C ─┤
 Request D ─┤──> Check member count
 Request E ─┘
-                 |
-                 v
+                |
+                v
           Multiple requests
           observe valid state
-                 |
-                 v
+                |
+                v
           Multiple additions
 ```
 
 The security property that needed to be tested was therefore the **atomicity of the membership limit**.
+
+
 
 ---
 
@@ -211,6 +221,8 @@ The important observation was that the issue was not caused by modifying the mem
 Instead, the vulnerability resulted from **concurrent execution of otherwise valid requests**.
 
 This is characteristic of a race condition / time-of-check-to-time-of-use (TOCTOU) vulnerability.
+
+![Turbo Intruder concurrent request results](/assets/PII/turbo-intruder-results.png)
 
 ---
 
@@ -247,9 +259,7 @@ After establishing the membership-limit bypass, I continued reviewing the legacy
 
 I identified three additional endpoints associated with organization members.
 
-These endpoints exposed different categories of user information.
-
-The three categories were:
+These endpoints exposed different categories of user information:
 
 ```text
 1. First Name / Last Name / Contact Information
@@ -260,6 +270,7 @@ The three categories were:
 ```
 
 This significantly expanded the impact of the initial race condition.
+
 
 ---
 
@@ -392,6 +403,7 @@ Discover legacy member endpoints
                 +--> Connected Organizations
 ```
 
+
 ---
 
 ## 14. Impact
@@ -410,156 +422,8 @@ The finding therefore combined a **race condition**, **business-logic bypass**, 
 
 The most significant impact was the ability to violate an organization-level security and billing invariant at scale.
 
----
 
-## 15. Root Cause
 
-The primary technical issue was that the organization membership limit was not enforced as an atomic operation.
-
-The vulnerable logic can be represented as:
-
-```text
-Read Member Count
-       |
-       v
-Check Limit
-       |
-       v
-Create Membership
-       |
-       v
-Update State
-```
-
-When multiple requests were processed concurrently, several requests could pass the membership check before the underlying state was updated.
-
-As a result, the application could transition from:
-
-```text
-5 Members
-```
-
-to:
-
-```text
-200+ Members
-```
-
-without correctly enforcing the business constraint.
-
-The presence of the legacy `/api/v1/add-user` endpoint also provided an alternative path to the membership functionality.
-
----
-
-## 16. Remediation
-
-### 16.1 Enforce the Membership Limit Atomically
-
-The membership limit should be enforced using an atomic database transaction or equivalent concurrency-control mechanism.
-
-The operation should conceptually be:
-
-```text
-Validate Limit
-      +
-Reserve Membership Slot
-      +
-Create Membership
-```
-
-These operations must be protected from concurrent execution.
-
-### 16.2 Use Database-Level Constraints
-
-Where appropriate, enforce membership limits using database-level controls rather than relying exclusively on application logic.
-
-Application-level checks alone are insufficient when multiple requests can execute simultaneously.
-
-### 16.3 Decommission Legacy APIs
-
-Unused `/api/v1` endpoints should be removed.
-
-If legacy functionality must remain available, it should use the same authorization, validation, rate-limiting, and business-logic controls as the current API.
-
-### 16.4 Enforce Authorization on Every Endpoint
-
-Each member-data endpoint should independently verify that the authenticated user is authorized to access the requested account.
-
-Authorization should not be implicitly granted because an account was previously added or referenced through another endpoint.
-
-### 16.5 Protect Sensitive Security Metadata
-
-Information such as:
-
-```text
-2FA Status
-2FA Method
-Organization Memberships
-```
-
-should only be returned to appropriately authorized users.
-
-### 16.6 Implement Abuse Detection
-
-The application should detect abnormal membership-creation patterns, particularly large numbers of requests originating from the same authenticated session within a short period.
-
----
-
-## 17. Key Bug Bounty Lessons
-
-### 17.1 Understand the Business Rule
-
-The five-member limit and $50 additional-member cost immediately identified the functionality as a valuable business-logic target.
-
-Whenever an application has quotas, limits, credits, payments, or resource allocations, test whether those constraints remain valid under concurrent execution.
-
-### 17.2 Map the Entire Workflow
-
-Instead of testing only the final `/api/v2/connect` request, I mapped the entire process:
-
-```text
-Save
- ↓
-UUID Assignment
- ↓
-Authorization
- ↓
-Connect
-```
-
-Understanding the complete workflow made it easier to identify alternative implementations.
-
-### 17.3 Investigate Historical APIs
-
-The current API was not the only source of functionality.
-
-Historical documentation revealed:
-
-```text
-/api/v1/add-user
-```
-
-This demonstrates why legacy endpoints and archived documentation can be valuable during API security assessments.
-
-### 17.4 Test Invariants Under Concurrency
-
-A useful question when testing business logic is:
-
-> What must always remain true?
-
-In this case:
-
-```text
-Organization Members <= Allowed Limit
-```
-
-The race-condition test demonstrated that this invariant could be violated.
-
-### 17.5 Continue After the Initial Finding
-
-After proving the membership-limit bypass, I reviewed related legacy functionality and identified additional endpoints exposing user information.
-
-This expanded the finding from a single business-logic issue into a broader attack chain.
 
 ---
 
@@ -573,11 +437,17 @@ Further analysis of the legacy API revealed additional endpoints exposing:
 
 ```text
 First Name / Last Name / Contact Information
+
             |
+
             v
+
 2FA Status / 2FA Method
+
             |
+
             v
+
 Connected Organizations
 ```
 
@@ -605,8 +475,11 @@ Legacy Member Endpoints
 Sensitive Information Disclosure
 ```
 
-The primary lesson is that business-logic controls must be enforced atomically and consistently across every API version.
+The overall impact warrants **High severity** consideration because the vulnerability combined a scalable race-condition-based business-logic bypass with unauthorized access to sensitive member information.
+
+![Attack chain overview](/assets/PII/high.png)
+
+
+The primary technical lesson is that business-logic controls must be enforced atomically and consistently across every API version.
 
 A membership limit that works correctly for sequential requests is not sufficient if concurrent requests can violate the underlying invariant.
-
----

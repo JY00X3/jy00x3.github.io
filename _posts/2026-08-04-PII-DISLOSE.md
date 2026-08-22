@@ -9,7 +9,7 @@ categories: [Bug Bounty, Web, API Security, Access Control]
 tags: [idor, bola, broken-access-control, api, race-condition, pii, authorization, legacy-api]
 
 image:
-path: /assets/api-chain/cover.png
+path: d:\blog\jy00x3.github.io\assets\PII disclosure GET ur guide\high.png 
 
 ---
 
@@ -26,8 +26,6 @@ POST /api/v2/organization/invitations
 ```
 
 A successful invitation response returned an `accountId` using the standard UUID format.
-
-![Desktop View](/assets/api-chain/1.png){: width="700" height="400" .normal }
 
 The returned UUID immediately became an interesting object for further authorization testing.
 
@@ -53,9 +51,7 @@ The response contained an internal debug hint referencing a legacy `/v1` endpoin
 }
 ```
 
-![Desktop View](/assets/api-chain/2.png){: width="700" height="400" .normal }
-
-🚨 This was an important discovery.
+This was an important discovery.
 
 The application was actively exposing information about an older API implementation.
 
@@ -97,9 +93,7 @@ HTTP/2 403 Forbidden
 }
 ```
 
-![Desktop View](/assets/api-chain/3.png){: width="700" height="400" .normal }
-
-✅ The modern endpoint appeared to enforce authorization correctly.
+The modern endpoint appeared to enforce authorization correctly.
 
 But then I tested the legacy endpoint.
 
@@ -127,9 +121,7 @@ HTTP/2 200 OK
 }
 ```
 
-![Desktop View](/assets/api-chain/4.png){: width="700" height="400" .normal }
-
-🚨 This confirmed a **Broken Object Level Authorization (BOLA)** vulnerability.
+This confirmed a **Broken Object Level Authorization (BOLA)** vulnerability.
 
 The `/v2` implementation checked whether the authenticated user was authorized to associate the target account, while the legacy `/v1` implementation accepted the arbitrary `accountId`.
 
@@ -188,9 +180,7 @@ HTTP/2 200 OK
 {"status":"SUCCESS","accountId":"550e8400-e29b-41d4-a716-446655440003"}
 ```
 
-![Desktop View](/assets/api-chain/5.png){: width="700" height="400" .normal }
-
-🔥 This demonstrated that the authorization bypass could be combined with a **race condition** to perform mass account-linking operations.
+This demonstrated that the authorization bypass could be combined with a **race condition** to perform mass account-linking operations.
 
 The vulnerability was therefore no longer limited to a single unauthorized account association.
 
@@ -217,8 +207,6 @@ The response contained:
 }
 ```
 
-![Desktop View](/assets/api-chain/6.png){: width="700" height="400" .normal }
-
 This exposed the complete name associated with the target account.
 
 ---
@@ -239,8 +227,6 @@ It returned the account's primary email address:
   "email": "account@example.com"
 }
 ```
-
-![Desktop View](/assets/api-chain/7.png){: width="700" height="400" .normal }
 
 This increased the impact from unauthorized account association to **PII disclosure**.
 
@@ -269,9 +255,7 @@ The endpoint exposed security and membership metadata:
 }
 ```
 
-![Desktop View](/assets/api-chain/8.png){: width="700" height="400" .normal }
-
-🚨 This exposed significantly more sensitive information, including:
+This exposed significantly more sensitive information, including:
 
 * Last login timestamp
 * 2FA status
@@ -317,8 +301,6 @@ Email Disclosure
       ↓
 2FA + Login + Organization Metadata
 ```
-
-![Desktop View](/assets/api-chain/9.png){: width="900" height="500" .normal }
 
 This demonstrated how several individually interesting weaknesses could be chained together into a much more serious security impact.
 
@@ -444,8 +426,6 @@ Authorization should **not** be inherited merely because an account identifier w
 ---
 
 ## 🧠 Key Bug Bounty Takeaways
-
-This finding reinforced several important lessons when testing APIs.
 
 ### 1. Always Compare API Versions
 

@@ -1,529 +1,619 @@
 ---
 
-title: "Legacy API Authorization Bypass — Race Condition Mass Linking & PII Harvesting"
+title: "Race Condition in Organization Membership — Legacy API Abuse and Sensitive Data Exposure"
 
 date: 2026-08-04
 
-categories: [Bug Bounty, Web, API Security, Access Control]
+categories: [Bug Bounty, Web, API Security, Business Logic]
 
-tags: [idor, bola, broken-access-control, api, race-condition, pii, authorization, legacy-api]
+tags: [race-condition, turbo-intruder, api, bola, idor, access-control, business-logic, legacy-api]
 
 image:
-path: d:\blog\jy00x3.github.io\assets\PII disclosure GET ur guide\high.png 
+path: d:\blog\jy00x3.github.io\assets\PII disclosure GET ur guide\360_F_730400135_AsCtklC8gtZe10GFF9TTMXcZs0m2at4T.jpg
 
 ---
 
-# 🔗 Legacy API Authorization Bypass — Race Condition Mass Linking & PII Harvesting
+# Race Condition in Organization Membership — Legacy API Abuse and Sensitive Data Exposure
 
-## 1️⃣ Initial Reconnaissance
+## 1. Introduction
 
-While testing the application's organization and user-management functionality, I discovered an interesting API flow around account invitations and organization membership.
+While testing the organization's user-management functionality, I identified a business-logic restriction limiting organizations to **five members**. Each additional member required an additional payment of **$50**.
 
-The application exposed a modern `/v2` API:
+This made the membership functionality an interesting target for testing, particularly for race conditions and business-logic bypasses.
 
-```http
-POST /api/v2/organization/invitations
-```
+The initial objective was to understand how the application enforced the membership limit and whether the same controls were consistently applied across different API versions.
 
-A successful invitation response returned an `accountId` using the standard UUID format.
+The investigation eventually revealed a chain involving:
 
-The returned UUID immediately became an interesting object for further authorization testing.
+* Legacy API functionality
+* Inconsistent authorization controls
+* Race-condition-based membership-limit bypass
+* Mass account addition
+* Sensitive user information disclosure
 
-> **Testing mindset:** whenever an application exposes an object identifier such as an `accountId`, I always check whether that identifier is properly bound to the authenticated user's organization and permissions.
-
----
-
-## 2️⃣ Information Leakage Reveals a Legacy Endpoint
-
-During invitation testing, a malformed request produced a verbose error response.
-
-```http
-POST /api/v2/organization/invitations
-```
-
-The response contained an internal debug hint referencing a legacy `/v1` endpoint:
-
-```json
-{
-  "error": "INVALID_PAYLOAD",
-  "message": "Failed to process invitation via v2 gateway.",
-  "debugHint": "Legacy applications should fallback to POST /api/v1/organization/link-account using target account UUID."
-}
-```
-
-This was an important discovery.
-
-The application was actively exposing information about an older API implementation.
-
-This suggested that the `/v1` and `/v2` implementations might not enforce authorization consistently.
+The complete attack chain ultimately allowed more than **200 users** to be added to an organization that was intended to be limited to five members.
 
 ---
 
-## 3️⃣ Comparing `/v2` and `/v1` Authorization
+## 2. Mapping the Modern API Workflow
 
-The next step was to test the same account-linking operation through both API versions.
+I began by observing the normal process used by the application when connecting a user to an organization.
 
-### Modern `/v2` Endpoint
+The workflow involved several API requests under `/api/v2`.
 
-I first attempted to link an arbitrary account using:
-
-```http
-POST /api/v2/organization/link-account
-```
-
-with:
-
-```json
-{
-  "accountId": "550e8400-e29b-41d4-a716-446655440000",
-  "supplierId": "789880"
-}
-```
-
-The server correctly rejected the request:
-
-```http
-HTTP/2 403 Forbidden
-```
-
-```json
-{
-  "error": "UNAUTHORIZED_ACTION",
-  "message": "You are not authorized to associate this account with this organization."
-}
-```
-
-The modern endpoint appeared to enforce authorization correctly.
-
-But then I tested the legacy endpoint.
-
----
-
-## 4️⃣ Legacy `/v1` Authorization Bypass
-
-I sent the same logical request through:
-
-```http
-POST /api/v1/organization/link-account
-```
-
-The request was accepted:
-
-```http
-HTTP/2 200 OK
-```
-
-```json
-{
-  "status": "SUCCESS",
-  "message": "Account successfully linked to organization 789880",
-  "accountId": "550e8400-e29b-41d4-a716-446655440000"
-}
-```
-
-This confirmed a **Broken Object Level Authorization (BOLA)** vulnerability.
-
-The `/v2` implementation checked whether the authenticated user was authorized to associate the target account, while the legacy `/v1` implementation accepted the arbitrary `accountId`.
-
-The critical difference was:
+At a high level, the process was:
 
 ```text
-/v2  → Authorization enforced → 403
-/v1  → Authorization missing   → 200
+Save User Data
+      |
+      v
+Assign UUID
+      |
+      v
+Authorization Check
+      |
+      v
+Connect User to Organization
 ```
+
+### 2.1 Saving User Data and Assigning a UUID
+
+The first stage saved the user's information and generated an identifier that was subsequently used by the membership workflow.
+
+```http
+POST /api/v2/...
+```
+
+The assigned UUID became an important object identifier for subsequent authorization testing.
+
+### 2.2 Authorization Check
+
+The application then performed an authorization check to determine whether the user could be added to the organization.
+
+```http
+POST /api/v2/...
+```
+
+This indicated that the modern implementation was explicitly checking whether the requested membership operation was permitted.
+
+### 2.3 Connecting the User
+
+The final stage connected the user to the organization:
+
+```http
+POST /api/v2/connect
+```
+
+At this point, the application appeared to enforce the organization's membership restriction.
+
+Rather than immediately attempting to bypass the restriction, I continued investigating how the functionality was implemented and whether older versions of the API exposed alternative functionality.
 
 ---
 
-## 5️⃣ Race Condition — Mass Account Linking
+## 3. Historical API Documentation
 
-The next question was whether the vulnerable endpoint could be abused repeatedly.
+Because the application was using versioned APIs, I searched historical documentation using the Wayback Machine.
 
-The legacy endpoint did not appear to enforce effective synchronization or sufficient request throttling around account-linking operations.
-
-I therefore tested concurrent HTTP/2 requests rather than sending requests sequentially.
-
-Example request stream:
+This revealed an older API implementation containing:
 
 ```http
-POST /api/v1/organization/link-account HTTP/2
-
-{"accountId":"550e8400-e29b-41d4-a716-446655440001","supplierId":"789880"}
+POST /api/v1/add-user
 ```
 
-```http
-POST /api/v1/organization/link-account HTTP/2
+Unlike the newer workflow, the legacy endpoint accepted a user UUID directly.
 
-{"accountId":"550e8400-e29b-41d4-a716-446655440002","supplierId":"789880"}
-```
+This was significant because it provided an alternative path for performing the same general membership operation without necessarily going through the complete `/api/v2` workflow.
 
-```http
-POST /api/v1/organization/link-account HTTP/2
-
-{"accountId":"550e8400-e29b-41d4-a716-446655440003","supplierId":"789880"}
-```
-
-The server processed the requests concurrently:
-
-```http
-HTTP/2 200 OK
-```
-
-```json
-{"status":"SUCCESS","accountId":"550e8400-e29b-41d4-a716-446655440001"}
-```
-
-```json
-{"status":"SUCCESS","accountId":"550e8400-e29b-41d4-a716-446655440002"}
-```
-
-```json
-{"status":"SUCCESS","accountId":"550e8400-e29b-41d4-a716-446655440003"}
-```
-
-This demonstrated that the authorization bypass could be combined with a **race condition** to perform mass account-linking operations.
-
-The vulnerability was therefore no longer limited to a single unauthorized account association.
+The next step was therefore to understand how the UUID was generated and whether arbitrary user accounts could be targeted.
 
 ---
 
-## 6️⃣ Post-Exploitation — Profile Data
+## 4. UUID Analysis
 
-After an account was linked, I tested whether the newly associated account could be queried through other legacy endpoints.
-
-The first endpoint exposed profile information:
-
-```http
-GET /api/v1/organization/members/{accountId}/profile
-```
-
-The response contained:
-
-```json
-{
-  "accountId": "550e8400-e29b-41d4-a716-446655440000",
-  "firstName": "John",
-  "middleName": "Alexander",
-  "lastName": "Doe"
-}
-```
-
-This exposed the complete name associated with the target account.
-
----
-
-## 7️⃣ Contact Information Disclosure
-
-The next endpoint was:
-
-```http
-GET /api/v1/organization/members/{accountId}/contact
-```
-
-It returned the account's primary email address:
-
-```json
-{
-  "accountId": "550e8400-e29b-41d4-a716-446655440000",
-  "email": "account@example.com"
-}
-```
-
-This increased the impact from unauthorized account association to **PII disclosure**.
-
----
-
-## 8️⃣ Security Metadata Disclosure
-
-Finally, I tested the legacy security endpoint:
-
-```http
-GET /api/v1/organization/members/{accountId}/security
-```
-
-The endpoint exposed security and membership metadata:
-
-```json
-{
-  "accountId": "550e8400-e29b-41d4-a716-446655440000",
-  "lastLogin": "Saturday, August 1st, 2026 at 6:43:36 PM GMT+03:00",
-  "twoFactorStatus": "Enabled",
-  "twoFactorType": "Authenticator App",
-  "organizationMembership": [
-    "Org_789880",
-    "Org_100293"
-  ]
-}
-```
-
-This exposed significantly more sensitive information, including:
-
-* Last login timestamp
-* 2FA status
-* 2FA method
-* Organization memberships
-
-At this point, the attack chain demonstrated unauthorized access to both **identity information and security-related metadata**.
-
----
-
-## 9️⃣ Complete Attack Chain
-
-The final attack chain looked like this:
+During testing, I observed that the UUID generation process appeared to incorporate information related to the user's registration, including:
 
 ```text
-Verbose Error
-      ↓
-Legacy /v1 Endpoint Discovery
-      ↓
-UUID / Account Identifier
-      ↓
-/v2 Authorization Check → 403
-      ↓
-Switch to /v1
-      ↓
-Authorization Bypass
-      ↓
-Unauthorized Account Linking
-      ↓
-Concurrent Requests / Race Condition
-      ↓
-Mass Account Linking
-      ↓
-/profile
-      ↓
-Full Name Disclosure
-      ↓
-/contact
-      ↓
-Email Disclosure
-      ↓
-/security
-      ↓
-2FA + Login + Organization Metadata
+Signup Time
++
+First Name
++
+6 Random Characters
 ```
 
-This demonstrated how several individually interesting weaknesses could be chained together into a much more serious security impact.
+I attempted to construct the UUID of a specific target user using the observed pattern.
+
+The attempt was unsuccessful.
+
+This indicated that simply understanding the apparent UUID structure was insufficient to reliably identify a specific account.
+
+I therefore moved away from targeted UUID prediction and focused on the behavior of the legacy endpoint itself.
 
 ---
 
-## 🎯 Impact
+## 5. Testing the Legacy Add-User Endpoint
 
-The vulnerability chain allowed an attacker to:
+I tested randomly generated UUID values against:
 
-* Discover a legacy account-linking endpoint through verbose error handling.
-* Bypass authorization checks through the legacy `/v1` implementation.
-* Forcefully associate unauthorized accounts with an attacker-controlled organization.
-* Abuse concurrent requests to perform mass account-linking operations.
-* Access profile information belonging to unauthorized users.
-* Retrieve primary email addresses.
-* Retrieve last-login information.
-* Determine whether 2FA was enabled.
-* Identify the configured 2FA method.
-* Enumerate organization memberships.
+```http
+POST /api/v1/add-user
+```
 
-The combined impact was assessed as:
+The legacy functionality allowed valid account identifiers to be processed, but the organization's five-member restriction was still enforced.
 
-**CVSS v3.1: 9.1 — Critical**
+At this stage, the situation was:
 
 ```text
-CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N
+Maximum Members: 5
+
+Sequential Requests:
+5 Members → Additional Requests Rejected
 ```
+
+The endpoint itself was therefore not sufficient to bypass the membership restriction through sequential requests.
+
+This led to the next question:
+
+> Is the five-member limit enforced atomically, or is it implemented as a check followed by a separate database operation?
 
 ---
 
-## 🛡️ Root Cause
+## 6. Identifying the Race Condition
 
-The primary root cause was inconsistent security controls between API versions.
-
-The modern `/v2` endpoint performed authorization checks, while the legacy `/v1` implementation did not apply equivalent authorization controls.
-
-The vulnerable design effectively allowed the server to trust a client-controlled object identifier:
+The membership operation appeared to follow a logical sequence similar to:
 
 ```text
-accountId → link account
+1. Check current member count
+2. Verify that the limit has not been reached
+3. Add the new member
+4. Update the organization membership state
 ```
 
-without verifying:
+This type of implementation can become vulnerable if multiple requests perform the validation step before any of them commits the resulting state change.
+
+Conceptually:
 
 ```text
-Does the authenticated user have permission to perform this operation
-on this specific account?
+Request A ─┐
+Request B ─┤
+Request C ─┤
+Request D ─┤──> Check member count
+Request E ─┘
+                 |
+                 v
+          Multiple requests
+          observe valid state
+                 |
+                 v
+          Multiple additions
 ```
 
-The race condition further demonstrated insufficient synchronization around the account-linking operation.
+The security property that needed to be tested was therefore the **atomicity of the membership limit**.
 
 ---
 
-## 🔧 Recommendations
+## 7. Exploiting the Race Condition
 
-### 1️⃣ Decommission Legacy APIs
+I used Burp Suite Turbo Intruder to send concurrent requests against the legacy membership endpoint.
 
-Remove obsolete `/v1` endpoints whenever they are no longer required.
+The purpose was to determine whether simultaneous requests could bypass the membership invariant.
 
-If legacy endpoints must remain available, they should use the same authorization middleware and security controls as current API versions.
+The organization was initially restricted to:
 
-### 2️⃣ Enforce Object-Level Authorization
+```text
+5 members
+```
 
-Every account-linking operation should verify authorization server-side.
+Under concurrent execution, however, the application processed a large number of membership operations before the membership state could be consistently enforced.
+
+The resulting state exceeded:
+
+```text
+200 members
+```
+
+despite the intended five-member limit.
+
+The important observation was that the issue was not caused by modifying the membership-limit parameter.
+
+Instead, the vulnerability resulted from **concurrent execution of otherwise valid requests**.
+
+This is characteristic of a race condition / time-of-check-to-time-of-use (TOCTOU) vulnerability.
+
+---
+
+## 8. Business Logic Impact
+
+The race condition had a direct business impact because the organization's membership model required payment for additional members.
+
+The intended model was:
+
+```text
+5 Members
+    |
+    v
+Additional Member
+    |
+    v
+$50 Additional Cost
+```
+
+The race condition allowed the membership constraint to be bypassed and more than 200 accounts to be added.
+
+Therefore, the vulnerability affected both:
+
+* The application's technical access-control model
+* The organization's subscription and billing logic
+
+The issue demonstrated that the membership quota was enforced at the application level but was not sufficiently protected against concurrent requests.
+
+---
+
+## 9. Legacy Endpoint Discovery After Membership Bypass
+
+After establishing the membership-limit bypass, I continued reviewing the legacy API functionality.
+
+I identified three additional endpoints associated with organization members.
+
+These endpoints exposed different categories of user information.
+
+The three categories were:
+
+```text
+1. First Name / Last Name / Contact Information
+
+2. 2FA Status / 2FA Method
+
+3. Connected Organizations
+```
+
+This significantly expanded the impact of the initial race condition.
+
+---
+
+## 10. User Profile and Contact Information
+
+The first legacy endpoint exposed basic identity information associated with a member.
+
+The returned data included:
+
+```text
+First Name
+Last Name
+Contact Information
+```
+
+The concern was that the endpoint could be queried for accounts made accessible through the vulnerable membership workflow.
+
+This transformed the issue from a simple quota bypass into a potential unauthorized information-disclosure vulnerability.
+
+---
+
+## 11. Two-Factor Authentication Information
+
+The second endpoint exposed security-related account metadata.
+
+The response included:
+
+```text
+2FA Status
+2FA Method
+```
 
 For example:
 
 ```text
-Authenticated User
-        ↓
-Organization
-        ↓
-Target Account
-        ↓
-Explicit Authorization Check
-        ↓
-Allow / Deny
+2FA Status: Enabled
+2FA Method: Authenticator App
 ```
 
-Never rely solely on the submitted `accountId`.
+Although this information did not expose the authentication secret itself, it disclosed the security configuration of the account.
 
-### 3️⃣ Protect Organization Membership Operations
-
-Only authorized organization administrators should be able to associate accounts.
-
-The backend should verify that the target account is legitimately eligible for the requested organization membership.
-
-### 4️⃣ Prevent Race Conditions
-
-Use atomic transactions, appropriate database constraints, and locking mechanisms where necessary.
-
-Critical membership operations should remain consistent even when multiple requests arrive simultaneously.
-
-### 5️⃣ Implement Rate Limiting
-
-Apply rate limits to:
-
-* Invitation endpoints
-* Account-linking endpoints
-* Member lookup endpoints
-* Sensitive metadata endpoints
-
-Rate limiting should apply consistently across API versions.
-
-### 6️⃣ Remove Debug Information
-
-Production error responses should never expose:
-
-* Internal API paths
-* Legacy endpoints
-* Internal documentation
-* Debug hints
-* Implementation details
-
-Return a generic error message instead.
-
-### 7️⃣ Secure Member Data Endpoints
-
-Every `/profile`, `/contact`, and `/security` request should independently verify whether the authenticated user is authorized to access the requested account.
-
-Authorization should **not** be inherited merely because an account identifier was previously supplied to another endpoint.
+This represents sensitive security metadata that should only be accessible to appropriately authorized users.
 
 ---
 
-## 🧠 Key Bug Bounty Takeaways
+## 12. Organization Membership Information
 
-### 1. Always Compare API Versions
+The third endpoint exposed information about organizations associated with the account.
 
-If you find:
-
-```text
-/v1
-/v2
-/v3
-```
-
-don't assume they implement identical authorization logic.
-
-Test the same functionality across versions.
-
-### 2. Treat IDs as Authorization Boundaries
-
-Whenever an API accepts:
-
-```json
-{
-  "accountId": "..."
-}
-```
-
-ask:
-
-> What prevents me from replacing this ID with another user's ID?
-
-### 3. Test Error Responses
-
-Verbose errors can reveal:
-
-* Hidden endpoints
-* Legacy APIs
-* Internal documentation
-* Framework information
-* Database behavior
-* Feature flags
-
-### 4. Think in Attack Chains
-
-A single authorization bypass may initially look like a medium-impact issue.
-
-But combining:
+Conceptually, the response could identify relationships such as:
 
 ```text
-Information Leak
-        +
-Authorization Bypass
-        +
-Race Condition
-        +
-BOLA
-        +
-PII Disclosure
+User
+ |
+ +-- Organization A
+ |
+ +-- Organization B
+ |
+ +-- Organization C
 ```
 
-can dramatically increase the overall impact.
+This disclosed additional information about the user's organizational relationships.
 
-### 5. Stop Once Impact Is Proven
-
-After demonstrating mass unauthorized linking and sensitive-data access, testing was terminated to avoid unnecessary modification of additional accounts and to remain within responsible disclosure boundaries.
+Combined with the profile and security endpoints, this created a broader user-information disclosure issue.
 
 ---
 
-## 🏁 Conclusion
+## 13. Complete Attack Chain
 
-What initially looked like a simple legacy API discovery eventually became a multi-stage authorization attack chain.
-
-The most important lesson was that **security controls must remain consistent across every API version**.
-
-A secure `/v2` endpoint does not protect an application if an older `/v1` implementation still exposes the same functionality without equivalent authorization checks.
-
-The final chain was:
+The complete attack chain can be summarized as follows:
 
 ```text
-Debug Information Leak
-        ↓
+Organization limited to 5 members
+                |
+                v
+Additional members require $50
+                |
+                v
+Map /api/v2 membership workflow
+                |
+                +--> Save user data
+                |
+                +--> Assign UUID
+                |
+                +--> Authorization check
+                |
+                +--> /api/v2/connect
+                |
+                v
+Review historical API documentation
+using the Wayback Machine
+                |
+                v
+Discover /api/v1/add-user
+                |
+                v
+Analyze UUID generation
+                |
+                v
+Attempt targeted UUID generation
+                |
+                v
+Targeted UUID attempt fails
+                |
+                v
+Test random UUIDs
+                |
+                v
+Five-member limit remains enforced
+                |
+                v
+Race-condition testing
+                |
+                v
+Turbo Intruder
+                |
+                v
+Concurrent requests
+                |
+                v
+More than 200 users added
+                |
+                v
+Discover legacy member endpoints
+                |
+                +--> Name / Contact Information
+                |
+                +--> 2FA Status / 2FA Method
+                |
+                +--> Connected Organizations
+```
+
+---
+
+## 14. Impact
+
+The complete chain demonstrated the ability to:
+
+* Bypass the intended five-member organization limit.
+* Add more than 200 users through concurrent requests.
+* Circumvent the business logic requiring payment for additional members.
+* Abuse legacy API functionality.
+* Access member profile and contact information.
+* Retrieve 2FA status and authentication method.
+* Identify organizations associated with users.
+
+The finding therefore combined a **race condition**, **business-logic bypass**, and **unauthorized information disclosure**.
+
+The most significant impact was the ability to violate an organization-level security and billing invariant at scale.
+
+---
+
+## 15. Root Cause
+
+The primary technical issue was that the organization membership limit was not enforced as an atomic operation.
+
+The vulnerable logic can be represented as:
+
+```text
+Read Member Count
+       |
+       v
+Check Limit
+       |
+       v
+Create Membership
+       |
+       v
+Update State
+```
+
+When multiple requests were processed concurrently, several requests could pass the membership check before the underlying state was updated.
+
+As a result, the application could transition from:
+
+```text
+5 Members
+```
+
+to:
+
+```text
+200+ Members
+```
+
+without correctly enforcing the business constraint.
+
+The presence of the legacy `/api/v1/add-user` endpoint also provided an alternative path to the membership functionality.
+
+---
+
+## 16. Remediation
+
+### 16.1 Enforce the Membership Limit Atomically
+
+The membership limit should be enforced using an atomic database transaction or equivalent concurrency-control mechanism.
+
+The operation should conceptually be:
+
+```text
+Validate Limit
+      +
+Reserve Membership Slot
+      +
+Create Membership
+```
+
+These operations must be protected from concurrent execution.
+
+### 16.2 Use Database-Level Constraints
+
+Where appropriate, enforce membership limits using database-level controls rather than relying exclusively on application logic.
+
+Application-level checks alone are insufficient when multiple requests can execute simultaneously.
+
+### 16.3 Decommission Legacy APIs
+
+Unused `/api/v1` endpoints should be removed.
+
+If legacy functionality must remain available, it should use the same authorization, validation, rate-limiting, and business-logic controls as the current API.
+
+### 16.4 Enforce Authorization on Every Endpoint
+
+Each member-data endpoint should independently verify that the authenticated user is authorized to access the requested account.
+
+Authorization should not be implicitly granted because an account was previously added or referenced through another endpoint.
+
+### 16.5 Protect Sensitive Security Metadata
+
+Information such as:
+
+```text
+2FA Status
+2FA Method
+Organization Memberships
+```
+
+should only be returned to appropriately authorized users.
+
+### 16.6 Implement Abuse Detection
+
+The application should detect abnormal membership-creation patterns, particularly large numbers of requests originating from the same authenticated session within a short period.
+
+---
+
+## 17. Key Bug Bounty Lessons
+
+### 17.1 Understand the Business Rule
+
+The five-member limit and $50 additional-member cost immediately identified the functionality as a valuable business-logic target.
+
+Whenever an application has quotas, limits, credits, payments, or resource allocations, test whether those constraints remain valid under concurrent execution.
+
+### 17.2 Map the Entire Workflow
+
+Instead of testing only the final `/api/v2/connect` request, I mapped the entire process:
+
+```text
+Save
+ ↓
+UUID Assignment
+ ↓
+Authorization
+ ↓
+Connect
+```
+
+Understanding the complete workflow made it easier to identify alternative implementations.
+
+### 17.3 Investigate Historical APIs
+
+The current API was not the only source of functionality.
+
+Historical documentation revealed:
+
+```text
+/api/v1/add-user
+```
+
+This demonstrates why legacy endpoints and archived documentation can be valuable during API security assessments.
+
+### 17.4 Test Invariants Under Concurrency
+
+A useful question when testing business logic is:
+
+> What must always remain true?
+
+In this case:
+
+```text
+Organization Members <= Allowed Limit
+```
+
+The race-condition test demonstrated that this invariant could be violated.
+
+### 17.5 Continue After the Initial Finding
+
+After proving the membership-limit bypass, I reviewed related legacy functionality and identified additional endpoints exposing user information.
+
+This expanded the finding from a single business-logic issue into a broader attack chain.
+
+---
+
+## 18. Conclusion
+
+The assessment began with a straightforward business rule: organizations were limited to five members, with additional members requiring an additional $50 payment.
+
+By mapping the modern `/api/v2` workflow, reviewing historical documentation, identifying the legacy `/api/v1/add-user` endpoint, analyzing UUID behavior, and testing the membership operation under concurrent execution, I identified a race condition that allowed more than 200 users to be added despite the intended membership restriction.
+
+Further analysis of the legacy API revealed additional endpoints exposing:
+
+```text
+First Name / Last Name / Contact Information
+            |
+            v
+2FA Status / 2FA Method
+            |
+            v
+Connected Organizations
+```
+
+The final attack chain was:
+
+```text
+Business Logic Restriction
+          |
+          v
 Legacy API Discovery
-        ↓
-Authorization Bypass
-        ↓
+          |
+          v
 Race Condition
-        ↓
-Mass Account Linking
-        ↓
-BOLA
-        ↓
-PII Disclosure
-        ↓
-Security Metadata Disclosure
+          |
+          v
+Membership Limit Bypass
+          |
+          v
+200+ Unauthorized Additions
+          |
+          v
+Legacy Member Endpoints
+          |
+          v
+Sensitive Information Disclosure
 ```
 
-**Overall Severity: Critical — CVSS 9.1**
+The primary lesson is that business-logic controls must be enforced atomically and consistently across every API version.
 
-> Always test the old endpoints. Sometimes the newest API is secure — while the legacy one is still wide open.
+A membership limit that works correctly for sequential requests is not sufficient if concurrent requests can violate the underlying invariant.
 
 ---
-
-# HAPPY HACKING 😈

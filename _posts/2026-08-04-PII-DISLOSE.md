@@ -2,7 +2,7 @@
 
 title: "Legacy API Authorization Bypass — Race Condition Mass Linking & PII Harvesting"
 
-date: 2026-08-23
+date: 2026-08-04
 
 categories: [Bug Bounty, Web, API Security, Access Control]
 

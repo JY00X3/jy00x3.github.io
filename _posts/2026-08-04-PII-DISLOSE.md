@@ -78,8 +78,6 @@ The final stage connected the user to the organization:
 POST /api/v2/connect
 ```
 
-![Modern API workflow](/assets/PII/6.png)
-
 
 At this point, the application appeared to enforce the organization's membership restriction.
 
@@ -221,7 +219,6 @@ Instead, the vulnerability resulted from **concurrent execution of otherwise val
 
 This is characteristic of a race condition / time-of-check-to-time-of-use (TOCTOU) vulnerability.
 
-![Turbo Intruder concurrent request results](/assets/PII/high.png)
 
 ---
 

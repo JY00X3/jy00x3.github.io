@@ -12,7 +12,7 @@ image:
 path: d:\blog\jy00x3.github.io\assets\PII disclosure GET ur guide\360_F_730400135_AsCtklC8gtZe10GFF9TTMXcZs0m2at4T.jpg
 
 ---
-![Desktop View](\assets\PII disclosure GET ur guide/cover.jpg){: width="700" height="400" .normal }
+![Desktop View](/assets/PII/cover.jpg){: width="700" height="400" .normal }
 
 ## 1. Introduction
 
